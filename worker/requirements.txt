@@ -1,0 +1,15 @@
+# Queue / state
+faststream[redis]>=0.5.40,<0.6
+redis>=5.2,<7.0
+pydantic>=2.9,<3.0
+pydantic-settings>=2.6,<3.0
+
+# Weight download (`hf download`). transformers<=4.51.3 (pinned by Wan2.2) requires hub<1.0.
+huggingface_hub[cli]>=0.34,<1.0
+
+# `import wan` loads the S2V and Animate pipelines at import time even for ti2v,
+# so their module-level imports must be present.
+einops>=0.8
+decord>=0.6.0
+peft>=0.13,<0.16
+librosa>=0.10

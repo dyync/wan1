@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Wan2.2 Studio</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --bg-glow: radial-gradient(1200px 600px at 80% -10%, #3b2a7a33, transparent 60%),
+                 radial-gradient(900px 500px at -10% 110%, #0e6e6e2b, transparent 60%);
+      --surface: #14161c;
+      --surface-2: #1b1e26;
+      --border: #262a35;
+      --text: #e8eaf0;
+      --muted: #8b91a1;
+      --accent: #8b7bff;
+      --accent-2: #3fd8c6;
+      --danger: #ff6b7a;
+      --ok: #4ade80;
+      --radius: 14px;
+      --radius-sm: 9px;
+      --shadow: 0 10px 40px #0007;
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100dvh;
+      background: var(--bg-glow), var(--bg);
+      color: var(--text);
+      font: 15px/1.55 var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell { max-width: 880px; margin: 0 auto; padding: 48px 16px 64px; }
+
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .logo {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: conic-gradient(from 210deg, var(--accent), var(--accent-2), var(--accent));
+      box-shadow: 0 0 24px #8b7bff55;
+    }
+    header h1 { font-size: 20px; font-weight: 650; letter-spacing: -.01em; margin: 0; }
+    header p { margin: 0; color: var(--muted); font-size: 13px; }
+    .health { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .dot[data-state="ok"] { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+    .dot[data-state="busy"] { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .dot[data-state="down"] { background: var(--danger); }
+
+    .card {
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+    .card + .card { margin-top: 18px; }
+
+    label.field-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+
+    textarea {
+      width: 100%; min-height: 128px; resize: vertical;
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 14px; font: inherit; line-height: 1.5;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    textarea:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px #8b7bff2e; }
+
+    .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; margin-top: 14px; }
+    .grow { flex: 1 1 auto; }
+    .counter { font: 12px var(--mono); color: var(--muted); margin-top: 6px; text-align: right; }
+    .counter[data-over="true"] { color: var(--danger); }
+
+    .segmented { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; }
+    .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+    .segmented label {
+      padding: 7px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 13px;
+      display: inline-flex; align-items: center; gap: 7px; transition: background .2s, color .2s;
+    }
+    .segmented input:checked + label { background: var(--border); color: var(--text); }
+    .segmented input:focus-visible + label { outline: 2px solid var(--accent); }
+    .shape { display: inline-block; border: 1.5px solid currentColor; border-radius: 2px; }
+    .shape.land { width: 16px; height: 9px; }
+    .shape.port { width: 9px; height: 16px; }
+
+    input[type="number"] {
+      width: 140px; background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 9px 11px; font: 13px var(--mono);
+    }
+
+    button {
+      font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: var(--radius-sm);
+      padding: 11px 20px; color: #0b0c10;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      transition: transform .15s var(--ease), filter .2s, opacity .2s;
+    }
+    button:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 8px 14px; font-weight: 500; }
+    button.ghost:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
+    .hint { font-size: 12px; color: var(--muted); }
+    kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; }
+
+    .status-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      font: 600 11px var(--mono); letter-spacing: .06em; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--muted);
+    }
+    .badge[data-s="PROCESSING"] { color: var(--accent); border-color: #8b7bff66; }
+    .badge[data-s="COMPLETED"] { color: var(--ok); border-color: #4ade8066; }
+    .badge[data-s="FAILED"] { color: var(--danger); border-color: #ff6b7a66; }
+    .stage { font-weight: 550; }
+    .meta { margin-left: auto; font: 12px var(--mono); color: var(--muted); display: flex; gap: 14px; }
+
+    .bar { position: relative; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 16px 0 8px; }
+    .bar > span {
+      position: absolute; inset: 0 auto 0 0; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border-radius: inherit; transition: width .6s var(--ease);
+    }
+    .bar[data-indeterminate="true"] > span { width: 30% !important; animation: slide 1.4s infinite var(--ease); }
+    @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+    .bar[data-active="true"] > span::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, #fff5, transparent);
+      animation: shimmer 1.6s infinite;
+    }
+    @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    .prompt-echo { color: var(--muted); font-size: 13px; margin: 10px 0 0; overflow-wrap: anywhere; }
+
+    .error {
+      margin-top: 14px; background: #ff6b7a12; border: 1px solid #ff6b7a44; color: #ffc2c8;
+      border-radius: var(--radius-sm); padding: 12px; font: 12px/1.5 var(--mono);
+      white-space: pre-wrap; max-height: 240px; overflow: auto;
+    }
+
+    .player { margin-top: 16px; border-radius: var(--radius-sm); overflow: hidden; background: #000; border: 1px solid var(--border); }
+    .player video { display: block; width: 100%; max-height: 70dvh; background: #000; }
+    .actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .actions a { color: var(--accent-2); font-size: 13px; text-decoration: none; }
+    .actions a:hover { text-decoration: underline; }
+
+    .history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .history li button {
+      width: 100%; text-align: left; background: var(--surface-2); color: var(--text); font-weight: 400;
+      border: 1px solid var(--border); padding: 10px 12px; display: flex; gap: 10px; align-items: center;
+    }
+    .history li button:hover { transform: none; border-color: var(--muted); }
+    .history .h-prompt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .history .h-time { font: 11px var(--mono); color: var(--muted); }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-title h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; font-weight: 600; }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 560px) {
+      .shell { padding-top: 28px; }
+      .meta { margin-left: 0; width: 100%; }
+      .row > button[type="submit"] { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>Wan2.2 Studio</h1>
+        <p>Text-to-video · TI2V-5B · 720p · 24 fps</p>
+      </div>
+      <div class="health" title="Backend status">
+        <span class="dot" id="health-dot"></span><span id="health-text">connecting…</span>
+      </div>
+    </header>
+
+    <form class="card" id="form" novalidate>
+      <label class="field-label" for="prompt">Prompt</label>
+      <textarea id="prompt" name="prompt" maxlength="2000" required
+        placeholder="Two anthropomorphic cats in comfy boxing gear fight intensely on a spotlighted stage, cinematic lighting, slow motion…"></textarea>
+      <div class="counter" id="counter">0 / 2000</div>
+
+      <div class="row">
+        <div>
+          <span class="field-label">Aspect</span>
+          <div class="segmented" role="radiogroup" aria-label="Aspect ratio">
+            <input type="radio" name="size" id="size-land" value="1280*704" checked>
+            <label for="size-land"><span class="shape land"></span>1280×704</label>
+            <input type="radio" name="size" id="size-port" value="704*1280">
+            <label for="size-port"><span class="shape port"></span>704×1280</label>
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="seed">Seed</label>
+          <input type="number" id="seed" name="seed" min="0" max="2147483647" step="1" placeholder="random">
+        </div>
+        <div class="grow hint">Takes about 5–10 min on an RTX 4090. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to submit.</div>
+        <button type="submit" id="submit">Generate</button>
+      </div>
+    </form>
+
+    <section class="card" id="status-card" hidden aria-live="polite">
+      <div class="status-head">
+        <span class="badge" id="badge">PENDING</span>
+        <span class="stage" id="stage">Queued</span>
+        <div class="meta"><span id="pct">0%</span><span id="elapsed">00:00</span></div>
+      </div>
+      <div class="bar" id="bar"><span id="bar-fill"></span></div>
+      <p class="prompt-echo" id="prompt-echo"></p>
+      <div class="error" id="error" hidden></div>
+
+      <div class="player" id="player" hidden>
+        <video id="video" controls playsinline loop preload="metadata"></video>
+      </div>
+      <div class="actions" id="actions" hidden>
+        <a id="download" download>Download MP4</a>
+        <span class="hint" id="seed-used"></span>
+      </div>
+    </section>
+
+    <section class="card" id="history-card" hidden>
+      <div class="section-title">
+        <h2>Recent</h2>
+        <button type="button" class="ghost" id="clear-history">Clear</button>
+      </div>
+      <ul class="history" id="history"></ul>
+    </section>
+  </main>
+
+  <script type="module">
+    // ---- tiny reactive store --------------------------------------------------
+    const createStore = (initial) => {
+      let state = initial;
+      const subs = new Set();
+      return {
+        get: () => state,
+        set: (patch) => {
+          state = { ...state, ...(typeof patch === "function" ? patch(state) : patch) };
+          subs.forEach((fn) => fn(state));
+        },
+        subscribe: (fn) => (subs.add(fn), fn(state), () => subs.delete(fn)),
+      };
+    };
+
+    const storage = {
+      get(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } },
+      set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
+      del(key) { try { localStorage.removeItem(key); } catch { /* storage unavailable */ } },
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      form: $("form"), prompt: $("prompt"), counter: $("counter"), seed: $("seed"), submit: $("submit"),
+      card: $("status-card"), badge: $("badge"), stage: $("stage"), pct: $("pct"), elapsed: $("elapsed"),
+      bar: $("bar"), fill: $("bar-fill"), echo: $("prompt-echo"), error: $("error"),
+      player: $("player"), video: $("video"), actions: $("actions"), download: $("download"), seedUsed: $("seed-used"),
+      historyCard: $("history-card"), history: $("history"), clearHistory: $("clear-history"),
+      healthDot: $("health-dot"), healthText: $("health-text"),
+    };
+
+    const STAGES = {
+      queued: "Waiting in queue",
+      loading_model: "Loading model",
+      sampling: "Denoising",
+      decoding: "Decoding frames (VAE)",
+      saving: "Encoding video",
+      finalizing: "Finalizing",
+      done: "Done",
+      failed: "Failed",
+    };
+    const TERMINAL = new Set(["COMPLETED", "FAILED"]);
+    const ACTIVE_KEY = "wan.activeTask";
+    const HISTORY_KEY = "wan.history";
+
+    const store = createStore({
+      submitting: false,
+      task: null,          // last TaskStatus from the API
+      taskId: null,
+      netError: null,
+      history: storage.get(HISTORY_KEY, []),
+      now: Date.now(),
+    });
+
+    // ---- API ------------------------------------------------------------------
+    const api = {
+      async submit(payload, signal) {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal,
+        });
+        if (!res.ok) throw new Error(await errorText(res));
+        return res.json();
+      },
+      async status(id, signal) {
+        const res = await fetch(`/api/tasks/${id}`, { signal, cache: "no-store" });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(await errorText(res));
+        return res.json();
+      },
+      async health(signal) {
+        const res = await fetch("/healthz", { signal, cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      },
+    };
+
+    async function errorText(res) {
+      try {
+        const body = await res.json();
+        if (Array.isArray(body.detail)) return body.detail.map((d) => d.msg).join("; ");
+        return body.detail ?? `HTTP ${res.status}`;
+      } catch { return `HTTP ${res.status}`; }
+    }
+
+    // ---- polling --------------------------------------------------------------
+    let poll = null;
+
+    function startPolling(taskId) {
+      poll?.abort();
+      const ctrl = new AbortController();
+      poll = ctrl;
+      let failures = 0;
+
+      const tick = async () => {
+        if (ctrl.signal.aborted) return;
+        try {
+          const task = await api.status(taskId, ctrl.signal);
+          if (ctrl.signal.aborted) return;
+          failures = 0;
+          if (!task) {
+            storage.del(ACTIVE_KEY);
+            removeFromHistory(taskId);
+            store.set({ task: null, taskId: null, netError: "That task no longer exists on the server." });
+            return;
+          }
+          store.set({ task, netError: null });
+          upsertHistory(task);
+          if (TERMINAL.has(task.status)) { storage.del(ACTIVE_KEY); return; }
+          setTimeout(tick, document.hidden ? 8000 : task.status === "PROCESSING" ? 1500 : 3000);
+        } catch (err) {
+          if (ctrl.signal.aborted) return;
+          failures += 1;
+          store.set({ netError: `Connection problem, retrying… (${err.message})` });
+          setTimeout(tick, Math.min(15000, 1000 * 2 ** failures));
+        }
+      };
+      tick();
+    }
+
+    // ---- history --------------------------------------------------------------
+    function upsertHistory(task) {
+      const entry = { id: task.task_id, prompt: task.prompt, status: task.status, created_at: task.created_at };
+      store.set(({ history }) => {
+        const next = [entry, ...history.filter((h) => h.id !== entry.id)].slice(0, 12);
+        storage.set(HISTORY_KEY, next);
+        return { history: next };
+      });
+    }
+    function removeFromHistory(id) {
+      store.set(({ history }) => {
+        const next = history.filter((h) => h.id !== id);
+        storage.set(HISTORY_KEY, next);
+        return { history: next };
+      });
+    }
+
+    // ---- events ---------------------------------------------------------------
+    els.prompt.addEventListener("input", () => render(store.get()));
+    els.prompt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) els.form.requestSubmit();
+    });
+
+    els.form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const prompt = els.prompt.value.trim();
+      if (prompt.length < 3) { els.prompt.focus(); return; }
+      const seedRaw = els.seed.value.trim();
+      const payload = {
+        prompt,
+        size: new FormData(els.form).get("size"),
+        seed: seedRaw === "" ? null : Number.parseInt(seedRaw, 10),
+      };
+
+      store.set({ submitting: true, netError: null });
+      try {
+        const { task_id } = await api.submit(payload);
+        storage.set(ACTIVE_KEY, task_id);
+        store.set({
+          taskId: task_id,
+          task: { task_id, status: "PENDING", stage: "queued", progress: 0, prompt, created_at: Date.now() / 1000 },
+        });
+        startPolling(task_id);
+      } catch (err) {
+        store.set({ netError: err.message });
+      } finally {
+        store.set({ submitting: false });
+      }
+    });
+
+    els.history.addEventListener("click", (e) => {
+      const id = e.target.closest("[data-id]")?.dataset.id;
+      if (!id || id === store.get().taskId) return;
+      store.set({ taskId: id, task: null, netError: null });
+      startPolling(id);
+    });
+
+    els.clearHistory.addEventListener("click", () => {
+      storage.set(HISTORY_KEY, []);
+      store.set({ history: [] });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      const { taskId, task } = store.get();
+      if (!document.hidden && taskId && task && !TERMINAL.has(task.status)) startPolling(taskId);
+    });
+
+    // ---- render ---------------------------------------------------------------
+    const fmtDuration = (s) => {
+      s = Math.max(0, Math.floor(s));
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      const mmss = `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      return h ? `${h}:${mmss}` : mmss;
+    };
+    const fmtAgo = (ts) => {
+      const s = Date.now() / 1000 - ts;
+      if (s < 60) return "just now";
+      if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+      if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+      return `${Math.floor(s / 86400)}d ago`;
+    };
+
+    let renderedVideo = null;
+
+    function render(state) {
+      const { task, submitting, netError, history, now, taskId } = state;
+      const len = els.prompt.value.length;
+      els.counter.textContent = `${len} / 2000`;
+      els.counter.dataset.over = String(len > 2000);
+
+      const busy = task && !TERMINAL.has(task.status);
+      els.submit.disabled = submitting || els.prompt.value.trim().length < 3;
+      els.submit.textContent = submitting ? "Submitting…" : busy ? "Queue another" : "Generate";
+
+      els.card.hidden = !task && !netError;
+      if (task) {
+        const pct = Math.round(task.progress ?? 0);
+        els.badge.textContent = task.status;
+        els.badge.dataset.s = task.status;
+        let label = STAGES[task.stage] ?? task.stage ?? "";
+        if (task.status === "PENDING" && task.queue_position) {
+          label = task.queue_position === 1 ? "Next in queue" : `Queued · position ${task.queue_position}`;
+        }
+        els.stage.textContent = label;
+        els.pct.textContent = `${pct}%`;
+        els.fill.style.width = `${pct}%`;
+        els.bar.dataset.indeterminate = String(task.status === "PENDING" || task.stage === "loading_model");
+        els.bar.dataset.active = String(task.status === "PROCESSING");
+        els.bar.hidden = task.status === "COMPLETED";
+        els.echo.textContent = task.prompt ? `“${task.prompt}”` : "";
+
+        const start = task.started_at ?? task.created_at;
+        const end = task.finished_at ?? now / 1000;
+        els.elapsed.textContent = start ? fmtDuration(end - start) : "";
+        els.elapsed.title = task.started_at ? "Render time" : "Time in queue";
+      }
+
+      const errMsg = task?.status === "FAILED" ? task.error ?? "Generation failed." : netError;
+      els.error.hidden = !errMsg;
+      els.error.textContent = errMsg ?? "";
+
+      const url = task?.status === "COMPLETED" ? task.video_url : null;
+      els.player.hidden = !url;
+      els.actions.hidden = !url;
+      if (url && renderedVideo !== url) {
+        renderedVideo = url;
+        els.video.src = url;
+        els.download.href = url;
+        els.download.setAttribute("download", `wan22-${task.task_id.slice(0, 8)}.mp4`);
+        els.seedUsed.textContent = task.seed != null ? `seed ${task.seed}` : "";
+        els.video.play().catch(() => { /* autoplay blocked; controls are visible */ });
+      } else if (!url && renderedVideo) {
+        renderedVideo = null;
+        els.video.removeAttribute("src");
+        els.video.load();
+      }
+
+      els.historyCard.hidden = history.length === 0;
+      els.history.replaceChildren(...history.map((h) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.id = h.id;
+        if (h.id === taskId) btn.style.borderColor = "var(--accent)";
+        const badge = Object.assign(document.createElement("span"), { className: "badge", textContent: h.status });
+        badge.dataset.s = h.status;
+        const p = Object.assign(document.createElement("span"), { className: "h-prompt", textContent: h.prompt });
+        const t = Object.assign(document.createElement("span"), { className: "h-time", textContent: fmtAgo(h.created_at) });
+        btn.append(badge, p, t);
+        li.append(btn);
+        return li;
+      }));
+    }
+
+    store.subscribe(render);
+
+    // Elapsed-time ticker, only while a job is running.
+    setInterval(() => {
+      const { task } = store.get();
+      if (task && !TERMINAL.has(task.status)) store.set({ now: Date.now() });
+    }, 1000);
+
+    // ---- health ---------------------------------------------------------------
+    async function checkHealth() {
+      try {
+        const h = await api.health(AbortSignal.timeout(5000));
+        els.healthDot.dataset.state = h.worker_busy ? "busy" : "ok";
+        els.healthText.textContent = h.worker_busy
+          ? `rendering${h.pending_jobs ? ` · ${h.pending_jobs} queued` : ""}`
+          : "ready";
+      } catch {
+        els.healthDot.dataset.state = "down";
+        els.healthText.textContent = "offline";
+      }
+    }
+    checkHealth();
+    setInterval(checkHealth, 10000);
+
+    // ---- resume after reload --------------------------------------------------
+    const resumeId = storage.get(ACTIVE_KEY, null) ?? store.get().history[0]?.id;
+    if (resumeId) {
+      store.set({ taskId: resumeId });
+      startPolling(resumeId);
+    }
+  </script>
+</body>
+</html>
